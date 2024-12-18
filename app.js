@@ -3,6 +3,10 @@ const express = require("express");
 const axios = require("axios");
 const querystring = require("querystring");
 
+const sharp = require("sharp");
+const fs = require("fs");
+const path = require("path");
+
 const app = express();
 const port = 8888;
 
@@ -79,8 +83,7 @@ app.get("/callback", async (req, res) => {
 
 // Recommendation route (generate artist recommendations)
 app.get("/recommend", async (req, res) => {
-  const accessToken = req.query.access_token || await getAccessToken(); // Use client credentials if no token provided
-  console.log("Access Token being used:", accessToken);
+  const accessToken = req.query.access_token || await getAccessToken();
 
   if (!accessToken) {
     return res.redirect("/");
@@ -97,51 +100,62 @@ app.get("/recommend", async (req, res) => {
       return res.send("No top artists found.");
     }
 
-    // Collect genres from the user's top artists
-    const userGenres = new Set();
-    topArtists.forEach(artist => {
-      artist.genres.forEach(genre => userGenres.add(genre));
+    // Prepare artist data (limit to 25 artists for a 5x5 grid)
+    const artists = topArtists.slice(0, 25).map(artist => ({
+      name: artist.name,
+      image: artist.images.length > 0 ? artist.images[0].url : null, // Use artist's image if available
+    }));
+
+    // Fetch and process artist images
+    const imagePromises = artists.map(async (artist, index) => {
+      const artistImageBuffer = artist.image
+        ? (await axios.get(artist.image, { responseType: "arraybuffer" })).data
+        : fs.readFileSync(path.join(__dirname, "public", "placeholder.png")); // Use placeholder if no image
+
+      // Add text overlay for the artist's name
+      return sharp(artistImageBuffer)
+        .resize(200, 200) // Resize each image to 200x200 pixels
+        .composite([{
+          input: Buffer.from(`
+            <svg width="200" height="200">
+              <rect x="0" y="150" width="200" height="50" fill="black" opacity="0.6"/>
+              <text x="100" y="180" font-size="14" font-family="Arial" fill="white" text-anchor="middle">${artist.name}</text>
+            </svg>
+          `),
+          top: 0,
+          left: 0
+        }])
+        .toBuffer();
     });
 
-    // Fetch saved tracks and albums
-    const savedArtists = new Set();
-    const trackResponse = await axios.get(`${SPOTIFY_API_URL}/me/tracks?limit=50`, { headers });
-    trackResponse.data.items.forEach(item => savedArtists.add(item.track.artists[0].name));
+    const processedImages = await Promise.all(imagePromises);
 
-    const albumResponse = await axios.get(`${SPOTIFY_API_URL}/me/albums?limit=50`, { headers });
-    albumResponse.data.items.forEach(item => savedArtists.add(item.album.artists[0].name));
+    // Combine into a 5x5 grid
+    const grid = sharp({
+      create: {
+        width: 1000, // 5 images * 200px
+        height: 1000, // 5 images * 200px
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 }, // White background
+      },
+    });
 
-    // Use genres to search for related artists
-    let recommendations = [];
-    for (const genre of userGenres) {
-      const searchResponse = await axios.get(`${SPOTIFY_API_URL}/search`, {
-        headers,
-        params: { q: `genre:${genre}`, type: "artist", limit: 5 }
-      });
+    const composites = processedImages.map((imageBuffer, index) => ({
+      input: imageBuffer,
+      top: Math.floor(index / 5) * 200,
+      left: (index % 5) * 200,
+    }));
 
-      searchResponse.data.artists.items.forEach(artist => {
-        if (!savedArtists.has(artist.name) && artist.popularity > 50) {
-          recommendations.push(artist.name);
-        }
-      });
-    }
+    const outputBuffer = await grid.composite(composites).png().toBuffer();
 
-    // Fallback to user's top artists if no recommendations are found
-    if (recommendations.length === 0) {
-      recommendations = topArtists.slice(0, 5).map(artist => artist.name);
-    }
+    // Save or serve the image
+    const outputPath = path.join(__dirname, "public", "collage.png");
+    fs.writeFileSync(outputPath, outputBuffer);
 
-    recommendations = [...new Set(recommendations)];
-    res.render("recommended", { recommendations });
-
+    res.sendFile(outputPath); // Serve the generated image to the client
   } catch (error) {
-    if (error.response) {
-      console.error("Spotify API Error:", error.response.data);
-      res.status(error.response.status).send(error.response.data);
-    } else {
-      console.error("Unknown Error:", error.message);
-      res.status(500).send("An unknown error occurred");
-    }
+    console.error("Error creating collage:", error);
+    res.status(500).send(`Error creating collage: ${error.message}`);
   }
 });
 
