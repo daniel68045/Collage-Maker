@@ -1,20 +1,9 @@
-# Ignore Python virtual environments
-
-venv/
-
-# Ignore environment files
-
+node_modules/
 .env
-
-# Ignore compiled Python files
-
-**pycache**/
-\*.pyc
-
-# Ignore IDE/project configuration files
-
+package-lock.json
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
 .idea/
-
-# Ignore logs or temporary files
-
-\*.log
+*.swp
