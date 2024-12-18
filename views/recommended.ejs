@@ -3,55 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recommended Artists</title>
+  <title>Artist Collage</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f8f9fa;
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 20px;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      max-width: 80%;
-      margin: 20px auto;
-    }
-    .card {
-      background-color: #fff;
+    .collage {
       border: 1px solid #ddd;
-      border-radius: 8px;
-      overflow: hidden;
-      text-align: center;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    .card img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
+    .artist-names {
+      font-size: 16px;
+      line-height: 1.6;
     }
-    .card .name {
-      padding: 10px;
-      font-size: 1rem;
-      font-weight: bold;
+    .row {
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>Recommended Artists</h1>
-  <div class="grid">
-    <% recommendations.forEach(artist => { %>
-      <div class="card">
-        <% if (artist.image) { %>
-          <img src="<%= artist.image %>" alt="<%= artist.name %>">
-        <% } else { %>
-          <div style="height: 200px; background-color: #ddd; display: flex; align-items: center; justify-content: center;">
-            <span>No Image</span>
-          </div>
-        <% } %>
-        <div class="name"><%= artist.name %></div>
+  <!-- Display the collage -->
+  <img src="<%= collagePath %>" alt="Artist Collage" class="collage">
+
+  <!-- Display the artist names grouped by rows -->
+  <div class="artist-names">
+    <% nameRows.forEach((row, index) => { %>
+      <div class="row">
+        <strong>Row <%= index + 1 %>:</strong>
+        <ul>
+          <% row.forEach(name => { %>
+            <li><%= name %></li>
+          <% }) %>
+        </ul>
       </div>
-    <% }); %>
+    <% }) %>
   </div>
 </body>
 </html>
+
+

@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const querystring = require("querystring");
-
 const sharp = require("sharp");
 const fs = require("fs");
 const path = require("path");
@@ -30,13 +29,13 @@ app.use(express.urlencoded({ extended: true }));
 async function getAccessToken() {
   try {
     const response = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
-      grant_type: "client_credentials"
+      grant_type: "client_credentials",
     }), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       auth: {
         username: CLIENT_ID,
-        password: CLIENT_SECRET
-      }
+        password: CLIENT_SECRET,
+      },
     });
 
     return response.data.access_token;
@@ -69,21 +68,27 @@ app.get("/callback", async (req, res) => {
         code: code,
         redirect_uri: REDIRECT_URI,
         client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET
+        client_secret: CLIENT_SECRET,
       })
     );
 
     const accessToken = tokenResponse.data.access_token;
-    res.redirect(`/recommend?access_token=${accessToken}`);
+    res.redirect(`/filters?access_token=${accessToken}`);
   } catch (error) {
     console.error("Error exchanging code for token:", error);
     res.status(500).send("Error during authentication");
   }
 });
 
-// Recommendation route (generate artist recommendations)
+// Filter selection route
+app.get("/filters", (req, res) => {
+  const accessToken = req.query.access_token; // Pass the token to the next step
+  res.render("filters", { accessToken });
+});
+
+// Recommendation route (generate chart based on filters)
 app.get("/recommend", async (req, res) => {
-  const accessToken = req.query.access_token || await getAccessToken();
+  const { accessToken, timeRange, gridSize, chartType } = req.query;
 
   if (!accessToken) {
     return res.redirect("/");
@@ -91,71 +96,71 @@ app.get("/recommend", async (req, res) => {
 
   try {
     const headers = { Authorization: `Bearer ${accessToken}` };
+    let data;
 
-    // Fetch user's top artists
-    const topArtistsResponse = await axios.get(`${SPOTIFY_API_URL}/me/top/artists`, { headers });
-    const topArtists = topArtistsResponse.data.items;
-
-    if (!topArtists || topArtists.length === 0) {
-      return res.send("No top artists found.");
+    if (chartType === "artists") {
+      // Fetch user's top artists based on time range
+      const response = await axios.get(`${SPOTIFY_API_URL}/me/top/artists`, {
+        headers,
+        params: { time_range: timeRange, limit: gridSize ** 2 },
+      });
+      data = response.data.items.map(artist => ({
+        name: artist.name,
+        image: artist.images.length > 0 ? artist.images[0].url : null,
+      }));
+    } else if (chartType === "songs") {
+      // Fetch user's top tracks based on time range
+      const response = await axios.get(`${SPOTIFY_API_URL}/me/top/tracks`, {
+        headers,
+        params: { time_range: timeRange, limit: gridSize ** 2 },
+      });
+      data = response.data.items.map(track => ({
+        name: track.name,
+        image: track.album.images.length > 0 ? track.album.images[0].url : null,
+      }));
     }
 
-    // Prepare artist data (limit to 25 artists for a 5x5 grid)
-    const artists = topArtists.slice(0, 25).map(artist => ({
-      name: artist.name,
-      image: artist.images.length > 0 ? artist.images[0].url : null, // Use artist's image if available
-    }));
+    // Fetch and process images
+    const imagePromises = data.map(async item => {
+      const imageBuffer = item.image
+        ? (await axios.get(item.image, { responseType: "arraybuffer" })).data
+        : fs.readFileSync(path.join(__dirname, "public", "placeholder.png"));
 
-    // Fetch and process artist images
-    const imagePromises = artists.map(async (artist, index) => {
-      const artistImageBuffer = artist.image
-        ? (await axios.get(artist.image, { responseType: "arraybuffer" })).data
-        : fs.readFileSync(path.join(__dirname, "public", "placeholder.png")); // Use placeholder if no image
-
-      // Add text overlay for the artist's name
-      return sharp(artistImageBuffer)
-        .resize(200, 200) // Resize each image to 200x200 pixels
-        .composite([{
-          input: Buffer.from(`
-            <svg width="200" height="200">
-              <rect x="0" y="150" width="200" height="50" fill="black" opacity="0.6"/>
-              <text x="100" y="180" font-size="14" font-family="Arial" fill="white" text-anchor="middle">${artist.name}</text>
-            </svg>
-          `),
-          top: 0,
-          left: 0
-        }])
-        .toBuffer();
+      return sharp(imageBuffer).resize(200, 200).toBuffer();
     });
 
     const processedImages = await Promise.all(imagePromises);
 
-    // Combine into a 5x5 grid
+    // Create grid
     const grid = sharp({
       create: {
-        width: 1000, // 5 images * 200px
-        height: 1000, // 5 images * 200px
+        width: gridSize * 200,
+        height: gridSize * 200,
         channels: 3,
-        background: { r: 255, g: 255, b: 255 }, // White background
+        background: { r: 255, g: 255, b: 255 },
       },
     });
 
     const composites = processedImages.map((imageBuffer, index) => ({
       input: imageBuffer,
-      top: Math.floor(index / 5) * 200,
-      left: (index % 5) * 200,
+      top: Math.floor(index / gridSize) * 200,
+      left: (index % gridSize) * 200,
     }));
 
     const outputBuffer = await grid.composite(composites).png().toBuffer();
-
-    // Save or serve the image
     const outputPath = path.join(__dirname, "public", "collage.png");
     fs.writeFileSync(outputPath, outputBuffer);
 
-    res.sendFile(outputPath); // Serve the generated image to the client
+    // Group names for display
+    const nameRows = [];
+    for (let i = 0; i < data.length; i += gridSize) {
+      nameRows.push(data.slice(i, i + gridSize).map(item => item.name));
+    }
+
+    res.render("recommended", { collagePath: "/collage.png", nameRows });
   } catch (error) {
-    console.error("Error creating collage:", error);
-    res.status(500).send(`Error creating collage: ${error.message}`);
+    console.error("Error generating chart:", error);
+    res.status(500).send(`Error generating chart: ${error.message}`);
   }
 });
 
@@ -163,3 +168,4 @@ app.get("/recommend", async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+
