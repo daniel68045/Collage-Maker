@@ -3,47 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Artist Collage</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;
-      gap: 20px;
-      padding: 20px;
-    }
-    .collage {
-      border: 1px solid #ddd;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .artist-names {
-      font-size: 16px;
-      line-height: 1.6;
-    }
-    .row {
-      margin-bottom: 20px;
-    }
-  </style>
+  <title>Generated Collage</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <!-- Display the collage -->
-  <img src="<%= collagePath %>" alt="Artist Collage" class="collage">
-
-  <!-- Display the artist names grouped by rows -->
-  <div class="artist-names">
-    <% nameRows.forEach((row, index) => { %>
-      <div class="row">
-        <strong>Row <%= index + 1 %>:</strong>
-        <ul>
-          <% row.forEach(name => { %>
-            <li><%= name %></li>
-          <% }) %>
-        </ul>
-      </div>
-    <% }) %>
+  <div class="container">
+    <img src="<%= collagePath %>" alt="Generated Chart">
   </div>
 </body>
 </html>
-
-

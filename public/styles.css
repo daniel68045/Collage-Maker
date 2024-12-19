@@ -1,0 +1,65 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #000000;
+  }
+  
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh; /* Full viewport height */
+    overflow: hidden; /* Hide scrollbars */
+  }
+  
+  .container img {
+    max-width: 90%; /* Scale down to 90% of the viewport width */
+    max-height: 90%; /* Scale down to 90% of the viewport height */
+    object-fit: contain; /* Ensure the image fits without distortion */
+    image-rendering: crisp-edges; /* Prevent blurriness */
+    image-rendering: pixelated; /* For sharper scaling */
+    border: 1px solid #ddd; /* Optional: Add a border for clarity */
+  }  
+  
+  .grid-item {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1; /* Ensures square tiles */
+    background-color: #000;
+  }
+  
+  .grid-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .grid-item .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5); /* Background for contrast */
+    text-align: center;
+    visibility: hidden; /* Default to hidden */
+  }
+  
+  .grid-item.show-names .overlay {
+    visibility: visible; /* Toggle visibility based on class */
+  }
+  

@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const querystring = require("querystring");
-const sharp = require("sharp");
+const sharp = require("sharp"); // Ensure sharp is imported
 const fs = require("fs");
 const path = require("path");
 
@@ -24,26 +24,6 @@ const SCOPE = "user-top-read user-library-read";
 // Middleware to serve static files and parse URL-encoded bodies
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
-
-// Function to get access token using client credentials
-async function getAccessToken() {
-  try {
-    const response = await axios.post(SPOTIFY_TOKEN_URL, querystring.stringify({
-      grant_type: "client_credentials",
-    }), {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      auth: {
-        username: CLIENT_ID,
-        password: CLIENT_SECRET,
-      },
-    });
-
-    return response.data.access_token;
-  } catch (error) {
-    console.error("Error fetching access token:", error);
-    throw new Error("Unable to fetch access token");
-  }
-}
 
 // Home route
 app.get("/", (req, res) => {
@@ -88,7 +68,7 @@ app.get("/filters", (req, res) => {
 
 // Recommendation route (generate chart based on filters)
 app.get("/recommend", async (req, res) => {
-  const { accessToken, timeRange, gridSize, chartType } = req.query;
+  const { accessToken, timeRange, gridSize, chartType, showNames } = req.query;
 
   if (!accessToken) {
     return res.redirect("/");
@@ -96,68 +76,87 @@ app.get("/recommend", async (req, res) => {
 
   try {
     const headers = { Authorization: `Bearer ${accessToken}` };
-    let data;
+    const totalItems = gridSize ** 2;
+    let fetchedData = [];
+    let offset = 0;
 
-    if (chartType === "artists") {
-      // Fetch user's top artists based on time range
-      const response = await axios.get(`${SPOTIFY_API_URL}/me/top/artists`, {
+    // Fetch data with pagination
+    while (fetchedData.length < totalItems) {
+      const endpoint =
+        chartType === "artists"
+          ? `${SPOTIFY_API_URL}/me/top/artists`
+          : `${SPOTIFY_API_URL}/me/top/tracks`;
+
+      const response = await axios.get(endpoint, {
         headers,
-        params: { time_range: timeRange, limit: gridSize ** 2 },
+        params: {
+          time_range: timeRange,
+          limit: Math.min(50, totalItems - fetchedData.length),
+          offset,
+        },
       });
-      data = response.data.items.map(artist => ({
-        name: artist.name,
-        image: artist.images.length > 0 ? artist.images[0].url : null,
-      }));
-    } else if (chartType === "songs") {
-      // Fetch user's top tracks based on time range
-      const response = await axios.get(`${SPOTIFY_API_URL}/me/top/tracks`, {
-        headers,
-        params: { time_range: timeRange, limit: gridSize ** 2 },
-      });
-      data = response.data.items.map(track => ({
-        name: track.name,
-        image: track.album.images.length > 0 ? track.album.images[0].url : null,
-      }));
+
+      const items = response.data.items;
+      fetchedData = fetchedData.concat(items);
+
+      offset += 50;
+      if (items.length < 50) break; // Exit loop if no more items
     }
 
-    // Fetch and process images
-    const imagePromises = data.map(async item => {
+    const data = fetchedData.map((item) => ({
+      name: item.name,
+      image: item.images?.[0]?.url || item.album?.images?.[0]?.url || null, // Use the largest image
+    }));
+
+    // High-resolution PNG size (adjust if needed)
+    const gridWidth = 1200; // Fixed width for high DPI
+    const gridHeight = 1200; // Fixed height for high DPI
+    const cellSize = Math.floor(gridWidth / gridSize); // Base cell size
+    const adjustedGridWidth = cellSize * gridSize; // Total width based on cell size
+    const adjustedGridHeight = cellSize * gridSize; // Total height based on cell size
+
+    // Fetch and resize artist images
+    const imagePromises = data.map(async (item) => {
       const imageBuffer = item.image
         ? (await axios.get(item.image, { responseType: "arraybuffer" })).data
         : fs.readFileSync(path.join(__dirname, "public", "placeholder.png"));
 
-      return sharp(imageBuffer).resize(200, 200).toBuffer();
+      return sharp(imageBuffer)
+        .resize(cellSize, cellSize, {
+          fit: "cover",
+          kernel: sharp.kernel.lanczos3, // High-quality resizing
+        })
+        .png({ quality: 100 }) // Preserve image quality
+        .toBuffer();
     });
 
     const processedImages = await Promise.all(imagePromises);
 
-    // Create grid
+    // Composite images into a single grid
+    const composites = processedImages.map((buffer, index) => ({
+      input: buffer,
+      top: Math.floor(index / gridSize) * cellSize,
+      left: (index % gridSize) * cellSize,
+    }));
+
+    // Create grid with adjusted dimensions
     const grid = sharp({
       create: {
-        width: gridSize * 200,
-        height: gridSize * 200,
+        width: adjustedGridWidth, // Use adjusted width
+        height: adjustedGridHeight, // Use adjusted height
         channels: 3,
-        background: { r: 255, g: 255, b: 255 },
+        background: { r: 255, g: 255, b: 255 }, // White background
       },
     });
-
-    const composites = processedImages.map((imageBuffer, index) => ({
-      input: imageBuffer,
-      top: Math.floor(index / gridSize) * 200,
-      left: (index % gridSize) * 200,
-    }));
 
     const outputBuffer = await grid.composite(composites).png().toBuffer();
     const outputPath = path.join(__dirname, "public", "collage.png");
     fs.writeFileSync(outputPath, outputBuffer);
 
-    // Group names for display
-    const nameRows = [];
-    for (let i = 0; i < data.length; i += gridSize) {
-      nameRows.push(data.slice(i, i + gridSize).map(item => item.name));
-    }
-
-    res.render("recommended", { collagePath: "/collage.png", nameRows });
+    res.render("recommended", {
+      collagePath: "/collage.png",
+      showNames: showNames === "true", // Pass visibility toggle
+    });
   } catch (error) {
     console.error("Error generating chart:", error);
     res.status(500).send(`Error generating chart: ${error.message}`);
@@ -168,4 +167,3 @@ app.get("/recommend", async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
-

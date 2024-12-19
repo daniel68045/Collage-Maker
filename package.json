@@ -19,6 +19,7 @@
   "homepage": "https://github.com/daniel68045/Collage-Maker#readme",
   "dependencies": {
     "axios": "^1.7.9",
+    "colorthief": "^2.6.0",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
     "express": "^4.21.2",

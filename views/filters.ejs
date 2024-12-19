@@ -1,39 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Filter Options</title>
-</head>
-<body>
-  <h1>Customize Your Chart</h1>
-  <form action="/recommend" method="get">
+<form action="/recommend" method="get">
     <input type="hidden" name="accessToken" value="<%= accessToken %>">
-    
+
     <label for="timeRange">Time Range:</label>
     <select name="timeRange" id="timeRange">
-      <option value="short_term">Last 4 Weeks</option>
-      <option value="medium_term">Last 6 Months</option>
-      <option value="long_term">All Time</option>
+        <option value="short_term">Last 4 Weeks</option>
+        <option value="medium_term">Last 6 Months</option>
+        <option value="long_term">All Time</option>
     </select>
     <br>
 
     <label for="gridSize">Grid Size:</label>
     <select name="gridSize" id="gridSize">
-      <% for (let i = 2; i <= 9; i++) { %>
-        <option value="<%= i %>"><%= i %> x <%= i %></option>
-      <% } %>
+        <% for (let i=2; i <=9; i++) { %>
+            <option value="<%= i %>">
+                <%= i %> x <%= i %>
+            </option>
+            <% } %>
     </select>
     <br>
 
     <label for="chartType">Chart Type:</label>
     <select name="chartType" id="chartType">
-      <option value="artists">Artists</option>
-      <option value="songs">Songs</option>
+        <option value="artists">Artists</option>
+        <option value="songs">Songs</option>
+    </select>
+    <br>
+
+    <label for="sortOrder">Sort By:</label>
+    <select name="sortOrder" id="sortOrder">
+        <option value="default">Default</option>
+        <option value="rainbow">Rainbow (Color-based)</option>
     </select>
     <br>
 
     <button type="submit">Generate Chart</button>
-  </form>
-</body>
-</html>
+</form>
