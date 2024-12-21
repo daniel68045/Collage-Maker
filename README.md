@@ -29,3 +29,7 @@ A web application that generates a collage based on your top artists or songs on
     ```
     node app.js
     ```
+
+## Note
+
+This app is in development mode, Spotify restricts the number of users that can access its Web API, please submit a response to this form so you can be added to the list of valid users: https://docs.google.com/forms/d/1RczCzGf9NKg6bcSy68FWf1kPq-NUKQZfLnEnpwsyWQ0/edit
