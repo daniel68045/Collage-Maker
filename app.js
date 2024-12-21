@@ -2,17 +2,14 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const querystring = require("querystring");
-const sharp = require("sharp"); // Ensure sharp is imported
+const sharp = require("sharp");
 const fs = require("fs");
 const path = require("path");
+const session = require("express-session");
 
 const app = express();
 const port = 8888;
 
-// Set EJS as view engine
-app.set("view engine", "ejs");
-
-// Spotify API credentials
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = "http://localhost:8888/callback";
@@ -21,25 +18,45 @@ const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const SPOTIFY_API_URL = "https://api.spotify.com/v1";
 const SCOPE = "user-top-read user-library-read";
 
-// Middleware to serve static files and parse URL-encoded bodies
+app.set("view engine", "ejs");
+
 app.use(express.static("public"));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false },
+  })
+);
 
 // Home route
 app.get("/", (req, res) => {
   res.render("index");
 });
 
-// Login route (redirect to Spotify for authentication)
+// Login route
 app.get("/login", (req, res) => {
   const authUrl = `${SPOTIFY_AUTH_URL}?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=${SCOPE}&show_dialog=true`;
   res.redirect(authUrl);
 });
 
-// Callback route (Spotify redirects here after login)
+// Logout route
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying session:", err);
+      return res.status(500).send("Error logging out. Please try again.");
+    }
+    res.redirect("/");
+  });
+});
+
+// Callback route
 app.get("/callback", async (req, res) => {
   const code = req.query.code;
-
   try {
     const tokenResponse = await axios.post(
       SPOTIFY_TOKEN_URL,
@@ -51,27 +68,33 @@ app.get("/callback", async (req, res) => {
         client_secret: CLIENT_SECRET,
       })
     );
-
     const accessToken = tokenResponse.data.access_token;
-    res.redirect(`/filters?access_token=${accessToken}`);
+    req.session.accessToken = accessToken;
+    res.redirect("/filters");
   } catch (error) {
-    console.error("Error exchanging code for token:", error);
-    res.status(500).send("Error during authentication");
+    console.error("Error during Spotify callback:", error.message);
+    res.redirect("/");
   }
 });
 
 // Filter selection route
 app.get("/filters", (req, res) => {
-  const accessToken = req.query.access_token; // Pass the token to the next step
-  res.render("filters", { accessToken });
+  if (!req.session.accessToken) {
+    return res.redirect("/");
+  }
+  res.render("filters");
 });
 
-// Recommendation route (generate chart based on filters)
-app.get("/recommend", async (req, res) => {
-  const { accessToken, timeRange, gridSize, chartType, showNames } = req.query;
+// Collage route
+app.post("/collage", async (req, res) => {
+  const accessToken = req.session.accessToken;
+  const { timeRange, gridSize, chartType, showNames } = req.body;
+  console.log("Show Names Toggle:", showNames);
 
   if (!accessToken) {
-    return res.redirect("/");
+    return res
+      .status(400)
+      .send("Access token is missing. Please log in again.");
   }
 
   try {
@@ -80,7 +103,6 @@ app.get("/recommend", async (req, res) => {
     let fetchedData = [];
     let offset = 0;
 
-    // Fetch data with pagination
     while (fetchedData.length < totalItems) {
       const endpoint =
         chartType === "artists"
@@ -100,52 +122,115 @@ app.get("/recommend", async (req, res) => {
       fetchedData = fetchedData.concat(items);
 
       offset += 50;
-      if (items.length < 50) break; // Exit loop if no more items
+      if (items.length < 50) break;
+    }
+
+    while (fetchedData.length < totalItems) {
+      fetchedData.push({ name: "No artist available", image: null });
     }
 
     const data = fetchedData.map((item) => ({
       name: item.name,
-      image: item.images?.[0]?.url || item.album?.images?.[0]?.url || null, // Use the largest image
+      image: item.images?.[0]?.url || item.album?.images?.[0]?.url || null,
     }));
 
-    // High-resolution PNG size (adjust if needed)
-    const gridWidth = 1200; // Fixed width for high DPI
-    const gridHeight = 1200; // Fixed height for high DPI
-    const cellSize = Math.floor(gridWidth / gridSize); // Base cell size
-    const adjustedGridWidth = cellSize * gridSize; // Total width based on cell size
-    const adjustedGridHeight = cellSize * gridSize; // Total height based on cell size
+    const cellSize = Math.floor(1200 / gridSize);
+    const adjustedGridWidth = cellSize * gridSize;
+    const adjustedGridHeight = cellSize * gridSize;
+    const composites = [];
 
-    // Fetch and resize artist images
-    const imagePromises = data.map(async (item) => {
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      const row = Math.floor(i / gridSize);
+      const col = i % gridSize;
+
+      const baseFontSize = -1;
+      const scalingFactor = 4;
+      const fontSize = Math.max(
+        baseFontSize,
+        Math.floor(baseFontSize + scalingFactor * Math.log(cellSize))
+      );
+      const textPadding = Math.floor(fontSize / 4);
+
+      const tempSvg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="5000" height="200">
+            <text x="0" y="${fontSize}" font-size="${fontSize}" font-family="Arial" alignment-baseline="hanging">${item.name}</text>
+          </svg>`;
+      const tempBuffer = Buffer.from(tempSvg);
+      const textMetadata = await sharp(tempBuffer).metadata();
+      let textWidth = textMetadata.width || 100;
+
+      if (textWidth + textPadding * 2 > cellSize) {
+        textWidth = cellSize - textPadding * 2;
+      }
+
+      const highDpiScale = 3;
+      const scaledFontSize = fontSize * highDpiScale;
+      const scaledTextPadding = textPadding * highDpiScale;
+      const scaledTextWidth = (textWidth + textPadding * 2) * highDpiScale;
+
+      const highResTextSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${scaledTextWidth}" height="${
+        (fontSize + textPadding * 2) * highDpiScale
+      }">
+        <rect x="0" y="0" width="${scaledTextWidth}" height="${
+        (fontSize + textPadding * 2) * highDpiScale
+      }" fill="black" />
+        <text x="${scaledTextPadding}" y="${
+        scaledFontSize + scaledTextPadding / 2
+      }" font-size="${scaledFontSize}" fill="white" text-anchor="start" alignment-baseline="hanging" 
+    font-family="Monospace" letter-spacing="-2.5">
+          ${item.name}
+        </text>
+      </svg>`;
+
       const imageBuffer = item.image
         ? (await axios.get(item.image, { responseType: "arraybuffer" })).data
-        : fs.readFileSync(path.join(__dirname, "public", "placeholder.png"));
+        : await sharp({
+            create: {
+              width: cellSize,
+              height: cellSize,
+              channels: 3,
+              background: { r: 255, g: 255, b: 255 },
+            },
+          })
+            .png()
+            .toBuffer();
 
-      return sharp(imageBuffer)
+      const imageLayer = await sharp(imageBuffer)
         .resize(cellSize, cellSize, {
           fit: "cover",
-          kernel: sharp.kernel.lanczos3, // High-quality resizing
+          kernel: sharp.kernel.lanczos3,
         })
-        .png({ quality: 100 }) // Preserve image quality
+        .png()
         .toBuffer();
-    });
 
-    const processedImages = await Promise.all(imagePromises);
+      composites.push({
+        input: imageLayer,
+        top: row * cellSize,
+        left: col * cellSize,
+      });
 
-    // Composite images into a single grid
-    const composites = processedImages.map((buffer, index) => ({
-      input: buffer,
-      top: Math.floor(index / gridSize) * cellSize,
-      left: (index % gridSize) * cellSize,
-    }));
+      const textLayer = await sharp(Buffer.from(highResTextSvg))
+        .resize(textWidth + textPadding * 2, fontSize + textPadding * 2)
+        .png()
+        .toBuffer();
 
-    // Create grid with adjusted dimensions
+      if (showNames === "true") {
+        composites.push({
+          input: textLayer,
+          top: row * cellSize + cellSize - (fontSize + textPadding * 2),
+          left: col * cellSize + (cellSize - (textWidth + textPadding * 2)) / 2,
+        });
+      }
+    }
+
     const grid = sharp({
       create: {
-        width: adjustedGridWidth, // Use adjusted width
-        height: adjustedGridHeight, // Use adjusted height
+        width: adjustedGridWidth,
+        height: adjustedGridHeight,
         channels: 3,
-        background: { r: 255, g: 255, b: 255 }, // White background
+        background: { r: 255, g: 255, b: 255 },
       },
     });
 
@@ -153,9 +238,9 @@ app.get("/recommend", async (req, res) => {
     const outputPath = path.join(__dirname, "public", "collage.png");
     fs.writeFileSync(outputPath, outputBuffer);
 
-    res.render("recommended", {
+    res.render("collage", {
       collagePath: "/collage.png",
-      showNames: showNames === "true", // Pass visibility toggle
+      filters: { timeRange, gridSize, chartType, showNames },
     });
   } catch (error) {
     console.error("Error generating chart:", error);
