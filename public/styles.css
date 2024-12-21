@@ -1,31 +1,32 @@
 /* Global Styles */
 body {
-  font-family: "Times New Roman";
+  font-family: "Times New Roman", serif;
   text-align: center;
   margin: 0;
   padding: 0;
-  background-color: #121212;
-  color: #fff;
+  background: linear-gradient(to bottom right, #fdf5e6, #f5deb3);
+  color: #2c2c2c;
 }
 
 /* Container Styles */
 .container,
 .filter-container {
   margin: 50px auto;
-  max-width: 600px;
-  background: #181818;
+  max-width: 450px;
+  background: #fdf5e6;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Title Styling */
 h1,
 .filter-title,
 .collage-title {
-  color: #1db954;
+  color: #6b8e23;
   font-size: 2.5rem;
   margin-bottom: 20px;
+  font-family: "Brush Script MT", cursive;
 }
 
 /* Form Styling */
@@ -39,53 +40,43 @@ form {
 label {
   font-weight: bold;
   margin-bottom: 5px;
+  color: #2c2c2c;
 }
 
 select,
 button {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #6b8e23;
   border-radius: 5px;
   font-size: 1rem;
-}
-
-button {
-  background-color: #1db954;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-}
-
-button:hover {
-  background-color: #1aa34a;
-  transform: scale(1.05);
-}
-
-/* Dropdown Styling */
-select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #1db954;
-  border-radius: 5px;
-  font-size: 1rem;
-  font-family: "Times New Roman";
-  background-color: #181818;
-  color: #fff;
-  appearance: none;
-  cursor: pointer;
+  font-family: "Times New Roman", serif;
+  background-color: #f5f5dc;
+  color: #2c2c2c;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+button {
+  background-color: #6b8e23;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background-color: #556b2f;
+  transform: scale(1.05);
+}
+
 select:hover {
-  background-color: #1db954;
-  color: #121212;
+  background-color: #fdf5e6;
+  color: #2c2c2c;
 }
 
 select:focus {
   outline: none;
-  box-shadow: 0 0 5px #1db954;
+  box-shadow: 0 0 5px #6b8e23;
 }
 
 /* Collage Image Styling */
@@ -94,7 +85,7 @@ select:focus {
   margin: 20px auto;
   max-width: 100%;
   height: auto;
-  border: 2px solid #282828;
+  border: 2px solid #dcdcdc;
   border-radius: 5px;
 }
 
@@ -107,7 +98,7 @@ select:focus {
 .back-button {
   text-decoration: none;
   padding: 10px 20px;
-  background-color: #1db954;
+  background-color: #6b8e23;
   color: white;
   border-radius: 50px;
   font-size: 1rem;
@@ -116,7 +107,7 @@ select:focus {
 }
 
 .back-button:hover {
-  background-color: #1aa34a;
+  background-color: #556b2f;
 }
 
 /* Logout Button Styling */
@@ -129,7 +120,7 @@ select:focus {
 .logout-button {
   text-decoration: none;
   padding: 8px 16px;
-  background-color: #ff0000;
+  background-color: #ff6347;
   color: white;
   border-radius: 5px;
   font-size: 0.9rem;
@@ -138,7 +129,7 @@ select:focus {
 }
 
 .logout-button:hover {
-  background-color: #cc0000;
+  background-color: #cd5c5c;
 }
 
 /* Login Button Styling */
@@ -146,7 +137,7 @@ select:focus {
   display: inline-block;
   text-decoration: none;
   padding: 10px 20px;
-  background-color: #1db954;
+  background-color: #6b8e23;
   color: white;
   border-radius: 50px;
   font-size: 1rem;
@@ -155,13 +146,13 @@ select:focus {
 }
 
 .login-button:hover {
-  background-color: #1aa34a;
+  background-color: #556b2f;
 }
 
 /* Paragraph Styling */
 p {
   font-size: 1rem;
-  color: #ccc;
+  color: #2c2c2c;
   margin-bottom: 20px;
 }
 
@@ -172,8 +163,8 @@ p {
   justify-content: center;
   align-items: center;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.9);
-  color: #1db954;
+  background-color: rgba(245, 222, 179, 0.9);
+  color: #6b8e23;
   position: fixed;
   top: 0;
   left: 0;
@@ -186,8 +177,8 @@ p {
 
 /* Spinner Animation */
 .spinner {
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #1db954;
+  border: 5px solid #f5f5dc;
+  border-top: 5px solid #6b8e23;
   border-radius: 50%;
   width: 50px;
   height: 50px;

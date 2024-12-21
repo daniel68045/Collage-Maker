@@ -89,7 +89,6 @@ app.get("/filters", (req, res) => {
 app.post("/collage", async (req, res) => {
   const accessToken = req.session.accessToken;
   const { timeRange, gridSize, chartType, showNames } = req.body;
-  console.log("Show Names Toggle:", showNames);
 
   if (!accessToken) {
     return res
