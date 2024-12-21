@@ -13,7 +13,7 @@ A web application that generates a collage based on your top artists or songs on
 
 1. Clone into repository with web URL: 
     ```
-    git clone 
+    git clone https://github.com/daniel68045/Collage-Maker.git
     ```
 2. Install dependencies:
     ```
