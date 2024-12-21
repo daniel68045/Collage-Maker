@@ -1,37 +1,31 @@
-/* General Body Styles */
+/* Global Styles */
 body {
-  font-family: Arial, sans-serif;
+  font-family: "Times New Roman";
+  text-align: center;
   margin: 0;
   padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: #f4f4f4;
+  background-color: #121212;
+  color: #fff;
 }
 
-/* Container Styling */
+/* Container Styles */
 .container,
 .filter-container {
-  text-align: center;
-  padding: 20px;
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  width: 90%;
+  margin: 50px auto;
   max-width: 600px;
+  background: #181818;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
 /* Title Styling */
-h1 {
-  font-size: 24px;
-  margin-bottom: 20px;
-  color: #333;
-}
-
+h1,
 .filter-title,
 .collage-title {
-  text-align: center;
+  color: #1db954;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
 }
 
 /* Form Styling */
@@ -53,19 +47,45 @@ button {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 button {
-  background-color: #007bff;
+  background-color: #1db954;
   color: white;
-  border: none;
-  cursor: pointer;
   font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #1aa34a;
+  transform: scale(1.05);
+}
+
+/* Dropdown Styling */
+select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #1db954;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-family: "Times New Roman";
+  background-color: #181818;
+  color: #fff;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+select:hover {
+  background-color: #1db954;
+  color: #121212;
+}
+
+select:focus {
+  outline: none;
+  box-shadow: 0 0 5px #1db954;
 }
 
 /* Collage Image Styling */
@@ -74,7 +94,7 @@ button:hover {
   margin: 20px auto;
   max-width: 100%;
   height: auto;
-  border: 2px solid #ccc;
+  border: 2px solid #282828;
   border-radius: 5px;
 }
 
@@ -87,14 +107,16 @@ button:hover {
 .back-button {
   text-decoration: none;
   padding: 10px 20px;
-  background-color: #007bff;
+  background-color: #1db954;
   color: white;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background 0.3s ease;
 }
 
 .back-button:hover {
-  background-color: #0056b3;
+  background-color: #1aa34a;
 }
 
 /* Logout Button Styling */
@@ -110,7 +132,7 @@ button:hover {
   background-color: #ff0000;
   color: white;
   border-radius: 5px;
-  font-size: 14px;
+  font-size: 0.9rem;
   font-weight: bold;
   transition: background-color 0.3s ease;
 }
@@ -126,8 +148,8 @@ button:hover {
   padding: 10px 20px;
   background-color: #1db954;
   color: white;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 50px;
+  font-size: 1rem;
   font-weight: bold;
   transition: background-color 0.3s ease;
 }
@@ -138,8 +160,8 @@ button:hover {
 
 /* Paragraph Styling */
 p {
-  font-size: 16px;
-  color: #666;
+  font-size: 1rem;
+  color: #ccc;
   margin-bottom: 20px;
 }
 
@@ -150,25 +172,22 @@ p {
   justify-content: center;
   align-items: center;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #1db954;
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
   z-index: 1000;
-}
-
-.loading-screen p {
-  font-size: 18px;
-  color: #333;
-  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
 }
 
 /* Spinner Animation */
 .spinner {
   border: 5px solid #f3f3f3;
-  border-top: 5px solid #007bff;
+  border-top: 5px solid #1db954;
   border-radius: 50%;
   width: 50px;
   height: 50px;
@@ -182,5 +201,26 @@ p {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+/* Utility Classes */
+.hidden {
+  display: none !important;
+}
+
+/* Adjustments for Smaller Screens */
+@media (max-width: 600px) {
+  h1,
+  .filter-title,
+  .collage-title {
+    font-size: 2rem;
+  }
+
+  .btn,
+  .back-button,
+  button {
+    font-size: 0.9rem;
+    padding: 8px 16px;
   }
 }
