@@ -133,7 +133,7 @@ app.post("/collage", async (req, res) => {
       image: item.images?.[0]?.url || item.album?.images?.[0]?.url || null,
     }));
 
-    const cellSize = Math.floor(1200 / gridSize);
+    const cellSize = Math.floor(1200 / gridSize) * 2;
     const adjustedGridWidth = cellSize * gridSize;
     const adjustedGridHeight = cellSize * gridSize;
     const composites = [];
@@ -209,19 +209,6 @@ app.post("/collage", async (req, res) => {
         top: row * cellSize,
         left: col * cellSize,
       });
-
-      const textLayer = await sharp(Buffer.from(highResTextSvg))
-        .resize(textWidth + textPadding * 2, fontSize + textPadding * 2)
-        .png()
-        .toBuffer();
-
-      if (showNames === "true") {
-        composites.push({
-          input: textLayer,
-          top: row * cellSize + cellSize - (fontSize + textPadding * 2),
-          left: col * cellSize + (cellSize - (textWidth + textPadding * 2)) / 2,
-        });
-      }
     }
 
     const grid = sharp({
@@ -233,7 +220,10 @@ app.post("/collage", async (req, res) => {
       },
     });
 
-    const outputBuffer = await grid.composite(composites).png().toBuffer();
+    const outputBuffer = await grid
+      .composite(composites)
+      .png({ quality: 100 })
+      .toBuffer();
     const outputPath = path.join(__dirname, "public", "collage.png");
     fs.writeFileSync(outputPath, outputBuffer);
 
